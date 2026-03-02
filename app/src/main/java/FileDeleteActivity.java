@@ -316,7 +316,17 @@ public class FileDeleteActivity extends Activity {
         recycleButton.setOnClickListener(new View.OnClickListener() {
 				@Override
 				public void onClick(View v) {
-					moveToRecycleBin(selectedFiles);
+                    // Show dialog to choose between Phone or SD Card Recycle Bin
+                    AlertDialog.Builder binBuilder = new AlertDialog.Builder(FileDeleteActivity.this);
+                    binBuilder.setTitle("Choose Recycle Bin");
+                    binBuilder.setItems(new CharSequence[]{"Phone Recycle Bin", "SD Card Recycle Bin"}, new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialogInterface, int which) {
+                            // which == 0 -> Phone, which == 1 -> SD Card
+                            new MoveToRecycleTask(selectedFiles, which == 1).execute();
+                        }
+                    });
+                    binBuilder.show();
 					dialog.dismiss();
 				}
 			});
@@ -509,21 +519,37 @@ public class FileDeleteActivity extends Activity {
 			.setPositiveButton("Delete All", new DialogInterface.OnClickListener() {
 				@Override
 				public void onClick(DialogInterface dialog, int which) {
-					performDeletion(filesToDelete);
+                    // Show Batch Deletion Dialog
+                    final String[] batchOptions = {"1 (Single)", "5 at a time", "10 at a time", "20 at a time", "30 at a time"};
+                    final int[] batchValues = {1, 5, 10, 20, 30};
+
+                    new AlertDialog.Builder(FileDeleteActivity.this)
+                        .setTitle("Select Deletion Speed")
+                        .setItems(batchOptions, new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialogInterface, int index) {
+                                performDeletion(filesToDelete, batchValues[index]);
+                            }
+                        }).show();
 				}
 			})
 			.setNeutralButton("Move to Recycle", new DialogInterface.OnClickListener() {
 				@Override
 				public void onClick(DialogInterface dialog, int which) {
-					moveToRecycleBin(filesToDelete);
+                    // Show dialog to choose between Phone or SD Card Recycle Bin
+                    AlertDialog.Builder binBuilder = new AlertDialog.Builder(FileDeleteActivity.this);
+                    binBuilder.setTitle("Choose Recycle Bin");
+                    binBuilder.setItems(new CharSequence[]{"Phone Recycle Bin", "SD Card Recycle Bin"}, new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialogInterface, int whichBin) {
+                            new MoveToRecycleTask(filesToDelete, whichBin == 1).execute();
+                        }
+                    });
+                    binBuilder.show();
 				}
 			})
 			.setNegativeButton("Cancel", null)
 			.show();
-    }
-
-    private void moveToRecycleBin(List<File> filesToMove) {
-        new MoveToRecycleTask(filesToMove).execute();
     }
 
     private List<File> findSiblingFiles(File originalFile) {
@@ -553,7 +579,7 @@ public class FileDeleteActivity extends Activity {
         return siblings;
     }
 
-    private void performDeletion(List<File> filesToDelete) {
+    private void performDeletion(List<File> filesToDelete, int batchSize) {
         ArrayList<String> filePathsToDelete = new ArrayList<>();
         for (File file : filesToDelete) {
             filePathsToDelete.add(file.getAbsolutePath());
@@ -565,6 +591,7 @@ public class FileDeleteActivity extends Activity {
 
         Intent intent = new Intent(this, DeleteService.class);
         intent.putStringArrayListExtra(DeleteService.EXTRA_FILES_TO_DELETE, filePathsToDelete);
+        intent.putExtra("batch_size", batchSize); // Pass batch size
         ContextCompat.startForegroundService(this, intent);
     }
 
@@ -753,10 +780,12 @@ public class FileDeleteActivity extends Activity {
         private AlertDialog progressDialog;
         private List<File> filesToMove;
         private Context context;
+        private boolean useSdCardBin;
 
-        public MoveToRecycleTask(List<File> filesToMove) {
+        public MoveToRecycleTask(List<File> filesToMove, boolean useSdCardBin) {
             this.filesToMove = filesToMove;
             this.context = FileDeleteActivity.this;
+            this.useSdCardBin = useSdCardBin;
         }
 
         @Override
@@ -771,19 +800,29 @@ public class FileDeleteActivity extends Activity {
 
         @Override
         protected List<File> doInBackground(Void... voids) {
+            List<File> movedFiles = new ArrayList<>();
+            
+            // Standard Phone Recycle Bin Logic
             File recycleBinDir = new File(Environment.getExternalStorageDirectory(), "HFMRecycleBin");
-            if (!recycleBinDir.exists()) {
-                if (!recycleBinDir.mkdir()) {
-                    return new ArrayList<>();
-                }
+            if (!recycleBinDir.exists() && !useSdCardBin) {
+                 if (!recycleBinDir.mkdir()) return new ArrayList<>();
             }
 
-            List<File> movedFiles = new ArrayList<>();
             for (File sourceFile : filesToMove) {
-                if (sourceFile.exists()) {
-                    File destFile = new File(recycleBinDir, sourceFile.getName());
+                if (!sourceFile.exists()) continue;
 
-                    if (destFile.exists()) {
+                boolean moveSuccess = false;
+
+                if (useSdCardBin && StorageUtils.isFileOnSdCard(context, sourceFile)) {
+                     // NEW LOGIC: Use SD Card SAF move
+                     if (StorageUtils.moveFileOnSdCardSafely(context, sourceFile)) {
+                         moveSuccess = true;
+                     }
+                } else {
+                     // Existing Logic: Move to Phone Bin
+                     File destFile = new File(recycleBinDir, sourceFile.getName());
+                     // Handle name conflicts logic...
+                     if (destFile.exists()) {
                         String name = sourceFile.getName();
                         String extension = "";
                         int dotIndex = name.lastIndexOf(".");
@@ -793,34 +832,25 @@ public class FileDeleteActivity extends Activity {
                         }
                         destFile = new File(recycleBinDir, name + "_" + System.currentTimeMillis() + extension);
                     }
-
-                    boolean moveSuccess = false;
-
+                    
                     if (sourceFile.renameTo(destFile)) {
                         moveSuccess = true;
                     } else {
-                        Log.w("FileDeleteActivity", "renameTo failed for " + sourceFile.getAbsolutePath() + ". Falling back to copy-delete.");
+                        // Fallback copy-delete logic
                         if (StorageUtils.copyFile(context, sourceFile, destFile)) {
                             if (StorageUtils.deleteFile(context, sourceFile)) {
                                 moveSuccess = true;
                             } else {
-                                Log.e("FileDeleteActivity", "Failed to delete original file " + sourceFile.getAbsolutePath() + " after copy. Deleting copied file to prevent duplication.");
-                                destFile.delete();
-                                moveSuccess = false;
+                                destFile.delete(); 
                             }
-                        } else {
-                            Log.e("FileDeleteActivity", "Copy-delete fallback failed to copy file: " + sourceFile.getAbsolutePath());
-                            moveSuccess = false;
-                        }
+                        } 
                     }
+                    if(moveSuccess) sendBroadcast(new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE, Uri.fromFile(destFile)));
+                }
 
-                    if (moveSuccess) {
-                        movedFiles.add(sourceFile);
-                        sendBroadcast(new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE, Uri.fromFile(sourceFile)));
-                        sendBroadcast(new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE, Uri.fromFile(destFile)));
-                    } else {
-                        Log.w("FileDeleteActivity", "Failed to move file to recycle bin: " + sourceFile.getAbsolutePath());
-                    }
+                if (moveSuccess) {
+                    movedFiles.add(sourceFile);
+                    sendBroadcast(new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE, Uri.fromFile(sourceFile)));
                 }
             }
             return movedFiles;
