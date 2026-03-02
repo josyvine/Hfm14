@@ -24,6 +24,7 @@ import com.bumptech.glide.Glide;
 import com.bumptech.glide.load.engine.DiskCacheStrategy;
 import com.bumptech.glide.request.RequestOptions;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
@@ -41,7 +42,6 @@ public class MassDeleteAdapter extends RecyclerView.Adapter<MassDeleteAdapter.It
 
     public interface OnItemClickListener {
         void onItemClick(SearchResult item);
-        // The onItemLongClick is intentionally removed to resolve the conflict with DragSelectTouchListener
     }
 
     public MassDeleteAdapter(Context context, List<SearchResult> listItems, OnItemClickListener itemClickListener) {
@@ -126,7 +126,7 @@ public class MassDeleteAdapter extends RecyclerView.Adapter<MassDeleteAdapter.It
     }
 
     private int getIconForFileType(String fileName) {
-        if (fileName == null) return android.R.drawable.ic_menu_info_details;
+        if (fileName == null) return R.drawable.ic_folder_modern;
         String lower = fileName.toLowerCase();
         
         if (lower.endsWith(".doc") || lower.endsWith(".docx")) return android.R.drawable.ic_menu_save;
@@ -138,7 +138,8 @@ public class MassDeleteAdapter extends RecyclerView.Adapter<MassDeleteAdapter.It
         if (lower.endsWith(".mp3") || lower.endsWith(".wav") || lower.endsWith(".ogg")) return android.R.drawable.ic_media_play;
         if (isMediaFile(fileName)) return android.R.drawable.ic_menu_gallery;
         
-        return android.R.drawable.ic_menu_info_details;
+        // UPDATED: Modern yellow folder icon as fallback for non-media files/folders
+        return R.drawable.ic_folder_modern;
     }
 
     // --- RESTORED METHODS FOR PDF/APK LOGIC ---
