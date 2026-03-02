@@ -37,9 +37,9 @@ public class StorageBrowserAdapter extends RecyclerView.Adapter<RecyclerView.Vie
     private List<Object> masterList;
     private List<Object> filteredList;
     private final OnItemClickListener itemClickListener;
-    private final OnHeaderCheckedChangeListener headerClickListener;
+    private final OnHeaderCheckedChangeListener headerCheckedListener;
+    private final OnHeaderClickListener headerClickListener; // NEW
     
-    // RESTORED: Executor for manual thumbnail generation (PDFs, specific video frames if needed)
     private final ExecutorService thumbnailExecutor = Executors.newFixedThreadPool(4);
 
     public interface OnItemClickListener {
@@ -52,16 +52,24 @@ public class StorageBrowserAdapter extends RecyclerView.Adapter<RecyclerView.Vie
         void onHeaderCheckedChanged(StorageBrowserActivity.DateHeader header, boolean isChecked);
     }
 
-    public StorageBrowserAdapter(Context context, List<Object> items, OnItemClickListener itemClickListener, OnHeaderCheckedChangeListener headerClickListener) {
+    // NEW: Interface for minimize/expand toggle
+    public interface OnHeaderClickListener {
+        void onHeaderClick(StorageBrowserActivity.DateHeader header);
+    }
+
+    public StorageBrowserAdapter(Context context, List<Object> items, 
+                                 OnItemClickListener itemClickListener, 
+                                 OnHeaderCheckedChangeListener headerCheckedListener,
+                                 OnHeaderClickListener headerClickListener) {
         this.context = context;
         this.masterList = items;
         this.filteredList = new ArrayList<>(items);
         this.itemClickListener = itemClickListener;
+        this.headerCheckedListener = headerCheckedListener;
         this.headerClickListener = headerClickListener;
     }
 
     public void updateMasterList(List<Object> newItems) {
-        masterList = new ArrayList<>(newItems);
         filteredList = new ArrayList<>(newItems);
         notifyDataSetChanged();
     }
@@ -95,16 +103,30 @@ public class StorageBrowserAdapter extends RecyclerView.Adapter<RecyclerView.Vie
             final StorageBrowserActivity.DateHeader dateHeader = (StorageBrowserActivity.DateHeader) filteredList.get(position);
 
             headerViewHolder.dateHeaderText.setText(dateHeader.getDateString());
+            
+            // UPDATED: Handle arrow rotation for minimize icon
+            headerViewHolder.arrowIcon.setRotation(dateHeader.isExpanded() ? 0f : 180f);
+
             headerViewHolder.dateHeaderCheckbox.setOnCheckedChangeListener(null);
             headerViewHolder.dateHeaderCheckbox.setChecked(dateHeader.isChecked());
             headerViewHolder.dateHeaderCheckbox.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
 					@Override
 					public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-						if (headerClickListener != null) {
-							headerClickListener.onHeaderCheckedChanged(dateHeader, isChecked);
+						if (headerCheckedListener != null) {
+							headerCheckedListener.onHeaderCheckedChanged(dateHeader, isChecked);
 						}
 					}
 				});
+
+            // Handle minimize toggle click
+            headerViewHolder.itemView.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    if (headerClickListener != null) {
+                        headerClickListener.onHeaderClick(dateHeader);
+                    }
+                }
+            });
 
         } else {
             final FileViewHolder fileViewHolder = (FileViewHolder) holder;
@@ -112,7 +134,7 @@ public class StorageBrowserAdapter extends RecyclerView.Adapter<RecyclerView.Vie
             final File file = item.getFile();
 
             fileViewHolder.fileName.setText(file.getName());
-            fileViewHolder.thumbnailImage.setImageResource(android.R.color.darker_gray); // Default placeholder
+            fileViewHolder.thumbnailImage.setImageResource(android.R.color.darker_gray);
             fileViewHolder.thumbnailImage.setTag(file.getAbsolutePath());
             fileViewHolder.selectionOverlay.setVisibility(item.isSelected() ? View.VISIBLE : View.GONE);
             fileViewHolder.selectionCheckbox.setVisibility(file.isDirectory() ? View.GONE : View.VISIBLE);
@@ -129,7 +151,6 @@ public class StorageBrowserAdapter extends RecyclerView.Adapter<RecyclerView.Vie
 						}
 					}
 				});
-
 
             fileViewHolder.itemView.setOnClickListener(new View.OnClickListener() {
 					@Override
@@ -151,7 +172,7 @@ public class StorageBrowserAdapter extends RecyclerView.Adapter<RecyclerView.Vie
 				});
 
             if (file.isDirectory()) {
-                // UPDATED: Modern yellow folder icon
+                // Modern yellow folder icon
                 fileViewHolder.thumbnailImage.setImageResource(R.drawable.ic_folder_modern);
             } else {
                 int fallbackIcon = getIconForFileType(file.getName());
@@ -168,27 +189,6 @@ public class StorageBrowserAdapter extends RecyclerView.Adapter<RecyclerView.Vie
         }
     }
 
-    private Bitmap createThumbnail(File file) {
-        String path = file.getAbsolutePath();
-        String name = file.getName().toLowerCase();
-        Bitmap bitmap = null;
-        try {
-            if (name.endsWith(".jpg") || name.endsWith(".jpeg") || name.endsWith(".png") || name.endsWith(".bmp") || name.endsWith(".webp")) {
-                BitmapFactory.Options options = new BitmapFactory.Options();
-                options.inJustDecodeBounds = true;
-                BitmapFactory.decodeFile(path, options);
-                options.inSampleSize = calculateInSampleSize(options, 150, 150);
-                options.inJustDecodeBounds = false;
-                bitmap = BitmapFactory.decodeFile(path, options);
-            } else if (name.endsWith(".mp4") || name.endsWith(".mkv") || name.endsWith(".3gp") || name.endsWith(".webm")) {
-                bitmap = ThumbnailUtils.createVideoThumbnail(path, MediaStore.Video.Thumbnails.MINI_KIND);
-            }
-        } catch (Exception e) {
-            Log.e("StorageBrowserAdapter", "Error creating thumbnail for " + path, e);
-        }
-        return bitmap;
-    }
-
     private int getIconForFileType(String fileName) {
         String lowerFileName = fileName.toLowerCase();
         if (lowerFileName.endsWith(".doc") || lowerFileName.endsWith(".docx") || lowerFileName.endsWith(".pdf")) return android.R.drawable.ic_menu_save;
@@ -201,27 +201,9 @@ public class StorageBrowserAdapter extends RecyclerView.Adapter<RecyclerView.Vie
         return android.R.drawable.ic_menu_info_details;
     }
 
-    private int calculateInSampleSize(BitmapFactory.Options options, int reqWidth, int reqHeight) {
-        final int height = options.outHeight;
-        final int width = options.outWidth;
-        int inSampleSize = 1;
-        if (height > reqHeight || width > reqWidth) {
-            final int halfHeight = height / 2;
-            final int halfWidth = width / 2;
-            while ((halfHeight / inSampleSize) >= reqHeight && (halfWidth / inSampleSize) >= reqWidth) {
-                inSampleSize *= 2;
-            }
-        }
-        return inSampleSize;
-    }
-
     @Override
     public int getItemCount() {
         return filteredList.size();
-    }
-
-    public List<Object> getFilteredItems() {
-        return filteredList;
     }
 
     @Override
@@ -274,11 +256,13 @@ public class StorageBrowserAdapter extends RecyclerView.Adapter<RecyclerView.Vie
     public static class HeaderViewHolder extends RecyclerView.ViewHolder {
         TextView dateHeaderText;
         CheckBox dateHeaderCheckbox;
+        ImageView arrowIcon; // NEW
 
         public HeaderViewHolder(@NonNull View itemView) {
             super(itemView);
             dateHeaderText = itemView.findViewById(R.id.date_header_text_browser);
             dateHeaderCheckbox = itemView.findViewById(R.id.date_header_checkbox_browser);
+            arrowIcon = itemView.findViewById(R.id.header_arrow_browser); // NEW
         }
     }
 
@@ -291,16 +275,8 @@ public class StorageBrowserAdapter extends RecyclerView.Adapter<RecyclerView.Vie
             this.isSelected = false;
         }
 
-        public File getFile() {
-            return file;
-        }
-
-        public boolean isSelected() {
-            return isSelected;
-        }
-
-        public void setSelected(boolean selected) {
-            isSelected = selected;
-        }
+        public File getFile() { return file; }
+        public boolean isSelected() { return isSelected; }
+        public void setSelected(boolean selected) { isSelected = selected; }
     }
 }
