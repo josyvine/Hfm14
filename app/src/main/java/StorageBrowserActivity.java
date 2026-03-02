@@ -77,7 +77,7 @@ public class StorageBrowserActivity extends Activity implements StorageBrowserAd
 
     private StorageBrowserAdapter adapter;
     private List<Object> masterList = new ArrayList<>();
-    private List<Object> displayList = new ArrayList<>(); // NEW: Separate list for expansion logic
+    private List<Object> displayList = new ArrayList<>(); 
     private String currentPath;
     private BroadcastReceiver deleteCompletionReceiver;
     private BroadcastReceiver operationBroadcastReceiver;
@@ -106,12 +106,12 @@ public class StorageBrowserActivity extends Activity implements StorageBrowserAd
     public static class DateHeader {
         private final String dateString;
         private boolean isChecked;
-        private boolean isExpanded; // NEW: Track expansion state
+        private boolean isExpanded; 
 
         public DateHeader(String dateString) {
             this.dateString = dateString;
             this.isChecked = false;
-            this.isExpanded = true; // Default to expanded
+            this.isExpanded = true; 
         }
 
         public String getDateString() { return dateString; }
@@ -179,16 +179,16 @@ public class StorageBrowserActivity extends Activity implements StorageBrowserAd
         adapter = new StorageBrowserAdapter(this, displayList, this, this, this);
         gridLayoutManager = new GridLayoutManager(this, 3);
         gridLayoutManager.setSpanSizeLookup(new GridLayoutManager.SpanSizeLookup() {
-				@Override
-				public int getSpanSize(int position) {
-					if (position >= 0 && position < adapter.getItemCount()) {
-						if (displayList.get(position) instanceof DateHeader) {
-							return gridLayoutManager.getSpanCount();
-						}
-					}
-					return 1;
-				}
-			});
+                                @Override
+                                public int getSpanSize(int position) {
+                                        if (position >= 0 && position < adapter.getItemCount()) {
+                                                if (displayList.get(position) instanceof DateHeader) {
+                                                        return gridLayoutManager.getSpanCount();
+                                                }
+                                        }
+                                        return 1;
+                                }
+                        });
 
         fileGrid.setLayoutManager(gridLayoutManager);
         fileGrid.setAdapter(adapter);
@@ -196,70 +196,70 @@ public class StorageBrowserActivity extends Activity implements StorageBrowserAd
 
     private void setupListeners() {
         backButton.setOnClickListener(new View.OnClickListener() {
-				@Override
-				public void onClick(View v) {
-					File file = new File(currentPath);
-					File parent = file.getParentFile();
-					if (parent != null) {
-						currentPath = parent.getAbsolutePath();
-						pathTextView.setText(currentPath);
-						new ScanFilesTask().execute(parent);
-					} else {
-						finish();
-					}
-				}
-			});
+                                @Override
+                                public void onClick(View v) {
+                                        File file = new File(currentPath);
+                                        File parent = file.getParentFile();
+                                        if (parent != null) {
+                                                currentPath = parent.getAbsolutePath();
+                                                pathTextView.setText(currentPath);
+                                                new ScanFilesTask().execute(parent);
+                                        } else {
+                                                finish();
+                                        }
+                                }
+                        });
 
         deleteButton.setOnClickListener(new View.OnClickListener() {
-				@Override
-				public void onClick(View v) {
-					if (com.hfm.app.ClipboardManager.getInstance().hasItems()) {
-						updateFooterUI();
-					} else {
-						showFileOperationsDialog();
-					}
-				}
-			});
+                                @Override
+                                public void onClick(View v) {
+                                        if (com.hfm.app.ClipboardManager.getInstance().hasItems()) {
+                                                updateFooterUI();
+                                        } else {
+                                                showFileOperationsDialog();
+                                        }
+                                }
+                        });
 
         sortButton.setOnClickListener(new View.OnClickListener() {
-				@Override
-				public void onClick(View v) {
-					showSortMenu(v);
-				}
-			});
+                                @Override
+                                public void onClick(View v) {
+                                        showSortMenu(v);
+                                }
+                        });
 
         searchInput.addTextChangedListener(new TextWatcher() {
-				@Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
-				@Override public void onTextChanged(CharSequence s, int start, int before, int count) {
-					if (adapter != null) {
-						adapter.getFilter().filter(s);
-					}
-				}
-				@Override public void afterTextChanged(Editable s) {}
-			});
+                                @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+                                @Override public void onTextChanged(CharSequence s, int start, int before, int count) {
+                                        if (adapter != null) {
+                                                adapter.getFilter().filter(s);
+                                        }
+                                }
+                                @Override public void afterTextChanged(Editable s) {}
+                        });
 
         pasteButton.setOnClickListener(new View.OnClickListener() {
-				@Override
-				public void onClick(View v) {
-					performPaste();
-				}
-			});
+                                @Override
+                                public void onClick(View v) {
+                                        performPaste();
+                                }
+                        });
 
         createFolderButton.setOnClickListener(new View.OnClickListener() {
-				@Override
-				public void onClick(View v) {
-					showCreateFolderDialog();
-				}
-			});
+                                @Override
+                                public void onClick(View v) {
+                                        showCreateFolderDialog();
+                                }
+                        });
 
         cancelPasteButton.setOnClickListener(new View.OnClickListener() {
-				@Override
-				public void onClick(View v) {
-					com.hfm.app.ClipboardManager.getInstance().clear();
-					updateFooterUI();
-					Toast.makeText(StorageBrowserActivity.this, "Operation cancelled.", Toast.LENGTH_SHORT).show();
-				}
-			});
+                                @Override
+                                public void onClick(View v) {
+                                        com.hfm.app.ClipboardManager.getInstance().clear();
+                                        updateFooterUI();
+                                        Toast.makeText(StorageBrowserActivity.this, "Operation cancelled.", Toast.LENGTH_SHORT).show();
+                                }
+                        });
     }
 
     @Override
@@ -298,7 +298,6 @@ public class StorageBrowserActivity extends Activity implements StorageBrowserAd
 
     @Override
     public void onSelectionChanged() {
-        // Not used, handled by header/item clicks
     }
 
     @Override
@@ -315,7 +314,7 @@ public class StorageBrowserActivity extends Activity implements StorageBrowserAd
                 break;
             }
         }
-        adapter.notifyDataSetChanged();
+        rebuildDisplayList();
     }
 
     @Override
@@ -371,7 +370,7 @@ public class StorageBrowserActivity extends Activity implements StorageBrowserAd
             }
         }
         parentHeader.setChecked(allChildrenSelected);
-        
+
         int displayHeaderIndex = displayList.indexOf(parentHeader);
         if (displayHeaderIndex != -1) {
             adapter.notifyItemChanged(displayHeaderIndex);
@@ -402,12 +401,12 @@ public class StorageBrowserActivity extends Activity implements StorageBrowserAd
         Button recycleButton = dialogView.findViewById(R.id.button_move_to_recycle);
 
         detailsButton.setOnClickListener(new View.OnClickListener() {
-				@Override
-				public void onClick(View v) {
-					showDetailsDialog(selectedFiles);
-					dialog.dismiss();
-				}
-			});
+                                @Override
+                                public void onClick(View v) {
+                                        showDetailsDialog(selectedFiles);
+                                        dialog.dismiss();
+                                }
+                        });
 
         sendToDropZoneButton.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -422,55 +421,55 @@ public class StorageBrowserActivity extends Activity implements StorageBrowserAd
         });
 
         compressButton.setOnClickListener(new View.OnClickListener() {
-				@Override
-				public void onClick(View v) {
-					ArchiveUtils.startCompression(StorageBrowserActivity.this, selectedFiles, new File(currentPath));
-					Toast.makeText(StorageBrowserActivity.this, "Compression started in background.", Toast.LENGTH_SHORT).show();
-					dialog.dismiss();
-				}
-			});
+                                @Override
+                                public void onClick(View v) {
+                                        ArchiveUtils.startCompression(StorageBrowserActivity.this, selectedFiles, new File(currentPath));
+                                        Toast.makeText(StorageBrowserActivity.this, "Compression started in background.", Toast.LENGTH_SHORT).show();
+                                        dialog.dismiss();
+                                }
+                        });
 
         copyButton.setOnClickListener(new View.OnClickListener() {
-				@Override
-				public void onClick(View v) {
-					com.hfm.app.ClipboardManager.getInstance().setItems(selectedFiles, com.hfm.app.ClipboardManager.Operation.COPY);
-					Toast.makeText(StorageBrowserActivity.this, selectedFiles.size() + " item(s) ready to copy.", Toast.LENGTH_SHORT).show();
-					updateFooterUI();
-					dialog.dismiss();
-				}
-			});
+                                @Override
+                                public void onClick(View v) {
+                                        com.hfm.app.ClipboardManager.getInstance().setItems(selectedFiles, com.hfm.app.ClipboardManager.Operation.COPY);
+                                        Toast.makeText(StorageBrowserActivity.this, selectedFiles.size() + " item(s) ready to copy.", Toast.LENGTH_SHORT).show();
+                                        updateFooterUI();
+                                        dialog.dismiss();
+                                }
+                        });
 
         moveButton.setOnClickListener(new View.OnClickListener() {
-				@Override
-				public void onClick(View v) {
-					com.hfm.app.ClipboardManager.getInstance().setItems(selectedFiles, com.hfm.app.ClipboardManager.Operation.MOVE);
-					Toast.makeText(StorageBrowserActivity.this, selectedFiles.size() + " item(s) ready to move.", Toast.LENGTH_SHORT).show();
-					updateFooterUI();
-					dialog.dismiss();
-				}
-			});
+                                @Override
+                                public void onClick(View v) {
+                                        com.hfm.app.ClipboardManager.getInstance().setItems(selectedFiles, com.hfm.app.ClipboardManager.Operation.MOVE);
+                                        Toast.makeText(StorageBrowserActivity.this, selectedFiles.size() + " item(s) ready to move.", Toast.LENGTH_SHORT).show();
+                                        updateFooterUI();
+                                        dialog.dismiss();
+                                }
+                        });
 
         hideButton.setOnClickListener(new View.OnClickListener() {
-				@Override
-				public void onClick(View v) {
-					Intent intent = new Intent(StorageBrowserActivity.this, FileHiderActivity.class);
-					intent.putExtra(RitualRecordTapsActivity.EXTRA_FILES_TO_HIDE, (Serializable) selectedFiles);
-					startActivity(intent);
-					dialog.dismiss();
-				}
-			});
+                                @Override
+                                public void onClick(View v) {
+                                        Intent intent = new Intent(StorageBrowserActivity.this, FileHiderActivity.class);
+                                        intent.putExtra(RitualRecordTapsActivity.EXTRA_FILES_TO_HIDE, (Serializable) selectedFiles);
+                                        startActivity(intent);
+                                        dialog.dismiss();
+                                }
+                        });
 
         deleteButton.setOnClickListener(new View.OnClickListener() {
-				@Override
-				public void onClick(View v) {
-					initiateDeletionProcess();
-					dialog.dismiss();
-				}
-			});
+                                @Override
+                                public void onClick(View v) {
+                                        initiateDeletionProcess();
+                                        dialog.dismiss();
+                                }
+                        });
 
         recycleButton.setOnClickListener(new View.OnClickListener() {
-				@Override
-				public void onClick(View v) {
+                                @Override
+                                public void onClick(View v) {
                     AlertDialog.Builder binBuilder = new AlertDialog.Builder(StorageBrowserActivity.this);
                     binBuilder.setTitle("Choose Recycle Bin");
                     binBuilder.setItems(new CharSequence[]{"Phone Recycle Bin", "SD Card Recycle Bin"}, new DialogInterface.OnClickListener() {
@@ -480,9 +479,9 @@ public class StorageBrowserActivity extends Activity implements StorageBrowserAd
                         }
                     });
                     binBuilder.show();
-					dialog.dismiss();
-				}
-			});
+                                        dialog.dismiss();
+                                }
+                        });
 
         dialog.show();
     }
@@ -492,11 +491,11 @@ public class StorageBrowserActivity extends Activity implements StorageBrowserAd
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setTitle("Folder Operation: " + folder.getName());
         builder.setItems(options, new DialogInterface.OnClickListener() {
-				@Override
-				public void onClick(DialogInterface dialog, int which) {
-					List<File> folderList = new ArrayList<>();
-					folderList.add(folder);
-					switch (which) {
+                                @Override
+                                public void onClick(DialogInterface dialog, int which) {
+                                        List<File> folderList = new ArrayList<>();
+                                        folderList.add(folder);
+                                        switch (which) {
                         case 0: // Details
                             showDetailsDialog(folderList);
                             break;
@@ -504,20 +503,20 @@ public class StorageBrowserActivity extends Activity implements StorageBrowserAd
                             ArchiveUtils.startCompression(StorageBrowserActivity.this, folderList, new File(currentPath));
                             Toast.makeText(StorageBrowserActivity.this, "Compression started in background.", Toast.LENGTH_SHORT).show();
                             break;
-						case 2: // Copy
-							com.hfm.app.ClipboardManager.getInstance().setItems(folderList, com.hfm.app.ClipboardManager.Operation.COPY);
-							Toast.makeText(StorageBrowserActivity.this, "Folder '" + folder.getName() + "' ready to copy.", Toast.LENGTH_SHORT).show();
-							updateFooterUI();
-							break;
-						case 3: // Move
-							com.hfm.app.ClipboardManager.getInstance().setItems(folderList, com.hfm.app.ClipboardManager.Operation.MOVE);
-							Toast.makeText(StorageBrowserActivity.this, "Folder '" + folder.getName() + "' ready to move.", Toast.LENGTH_SHORT).show();
-							updateFooterUI();
-							break;
+                                                case 2: // Copy
+                                                        com.hfm.app.ClipboardManager.getInstance().setItems(folderList, com.hfm.app.ClipboardManager.Operation.COPY);
+                                                        Toast.makeText(StorageBrowserActivity.this, "Folder '" + folder.getName() + "' ready to copy.", Toast.LENGTH_SHORT).show();
+                                                        updateFooterUI();
+                                                        break;
+                                                case 3: // Move
+                                                        com.hfm.app.ClipboardManager.getInstance().setItems(folderList, com.hfm.app.ClipboardManager.Operation.MOVE);
+                                                        Toast.makeText(StorageBrowserActivity.this, "Folder '" + folder.getName() + "' ready to move.", Toast.LENGTH_SHORT).show();
+                                                        updateFooterUI();
+                                                        break;
                         case 4: // Hide
                             new GatherFilesForHidingTask().execute(folder);
                             break;
-						case 5: // Move to Recycle Bin
+                                                case 5: // Move to Recycle Bin
                             AlertDialog.Builder binBuilder = new AlertDialog.Builder(StorageBrowserActivity.this);
                             binBuilder.setTitle("Choose Recycle Bin");
                             binBuilder.setItems(new CharSequence[]{"Phone Recycle Bin", "SD Card Recycle Bin"}, new DialogInterface.OnClickListener() {
@@ -527,13 +526,13 @@ public class StorageBrowserActivity extends Activity implements StorageBrowserAd
                                 }
                             });
                             binBuilder.show();
-							break;
-						case 6: // Delete Permanently
+                                                        break;
+                                                case 6: // Delete Permanently
 							initiateFolderDeletionProcess(folder);
-							break;
-					}
-				}
-			});
+                                                        break;
+                                        }
+                                }
+                        });
         builder.show();
     }
 
@@ -542,31 +541,31 @@ public class StorageBrowserActivity extends Activity implements StorageBrowserAd
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setTitle(archiveFile.getName());
         builder.setItems(options, new DialogInterface.OnClickListener() {
-				@Override
-				public void onClick(DialogInterface dialog, int which) {
+                                @Override
+                                public void onClick(DialogInterface dialog, int which) {
                     if (which == 0) { // Details
                         List<File> fileList = new ArrayList<>();
                         fileList.add(archiveFile);
                         showDetailsDialog(fileList);
                     } else if (which == 1) { // Extract Here
-						final File destination = new File(currentPath);
-						if (StorageUtils.isFileOnSdCard(StorageBrowserActivity.this, destination) && !StorageUtils.hasSdCardPermission(StorageBrowserActivity.this)) {
-							mFilePendingPermissionForExtraction = archiveFile;
-							mPendingOperation = new Runnable() {
-								@Override
-								public void run() {
-									ArchiveUtils.extractArchive(StorageBrowserActivity.this, archiveFile, destination);
-								}
-							};
-							promptForSdCardPermission();
-						} else {
-							ArchiveUtils.extractArchive(StorageBrowserActivity.this, archiveFile, destination);
-						}
-					} else if (which == 2) { // Send to Drop Zone
+                                                final File destination = new File(currentPath);
+                                                if (StorageUtils.isFileOnSdCard(StorageBrowserActivity.this, destination) && !StorageUtils.hasSdCardPermission(StorageBrowserActivity.this)) {
+                                                        mFilePendingPermissionForExtraction = archiveFile;
+                                                        mPendingOperation = new Runnable() {
+                                                                @Override
+                                                                public void run() {
+                                                                        ArchiveUtils.extractArchive(StorageBrowserActivity.this, archiveFile, destination);
+                                                                }
+                                                        };
+                                                        promptForSdCardPermission();
+                                                } else {
+                                                        ArchiveUtils.extractArchive(StorageBrowserActivity.this, archiveFile, destination);
+                                                }
+                                        } else if (which == 2) { // Send to Drop Zone
                         showSendToDropDialog(archiveFile);
                     }
-				}
-			});
+                                }
+                        });
         builder.show();
     }
 
@@ -586,6 +585,7 @@ public class StorageBrowserActivity extends Activity implements StorageBrowserAd
 
         final AlertDialog dialog = builder.create();
 
+        // Populate basic details
         if (files.size() == 1) {
             File file = files.get(0);
             StringBuilder sb = new StringBuilder();
@@ -610,28 +610,28 @@ public class StorageBrowserActivity extends Activity implements StorageBrowserAd
 
 
         moreButton.setOnClickListener(new View.OnClickListener() {
-				@Override
-				public void onClick(View v) {
-					analyzer.analyze(files);
-				}
-			});
+                                @Override
+                                public void onClick(View v) {
+                                        analyzer.analyze(files);
+                                }
+                        });
 
         copyButton.setOnClickListener(new View.OnClickListener() {
-				@Override
-				public void onClick(View v) {
-					ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
-					ClipData clip = ClipData.newPlainText("AI Summary", aiDetailsText.getText());
-					clipboard.setPrimaryClip(clip);
-					Toast.makeText(StorageBrowserActivity.this, "Summary copied to clipboard.", Toast.LENGTH_SHORT).show();
-				}
-			});
+                                @Override
+                                public void onClick(View v) {
+                                        ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+                                        ClipData clip = ClipData.newPlainText("AI Summary", aiDetailsText.getText());
+                                        clipboard.setPrimaryClip(clip);
+                                        Toast.makeText(StorageBrowserActivity.this, "Summary copied to clipboard.", Toast.LENGTH_SHORT).show();
+                                }
+                        });
 
         closeButton.setOnClickListener(new View.OnClickListener() {
-				@Override
-				public void onClick(View v) {
-					dialog.dismiss();
-				}
-			});
+                                @Override
+                                public void onClick(View v) {
+                                        dialog.dismiss();
+                                }
+                        });
 
         dialog.show();
     }
@@ -725,7 +725,18 @@ public class StorageBrowserActivity extends Activity implements StorageBrowserAd
                     Toast.makeText(StorageBrowserActivity.this, "Folder is empty.", Toast.LENGTH_SHORT).show();
                     return;
                 }
-                performDeletion(allFilePaths, 30);
+                
+                final String[] batchOptions = {"1 (Single)", "5 at a time", "10 at a time", "20 at a time", "30 at a time"};
+                final int[] batchValues = {1, 5, 10, 20, 30};
+
+                new AlertDialog.Builder(StorageBrowserActivity.this)
+                    .setTitle("Select Deletion Speed")
+                    .setItems(batchOptions, new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialogInterface, int index) {
+                            performDeletion(allFilePaths, batchValues[index]);
+                        }
+                    }).show();
             }
         }.execute();
     }
@@ -773,18 +784,18 @@ public class StorageBrowserActivity extends Activity implements StorageBrowserAd
         if (filesToDelete.size() > filesToConfirm.size()) {
             int siblingCount = filesToDelete.size() - filesToConfirm.size();
             dialogMessage = "You selected <b>" + filesToConfirm.size() + "</b> file(s), but we found <b>" + siblingCount
-				+ "</b> other related version(s).<br/><br/>Are you sure you want to permanently delete all <b>"
-				+ filesToDelete.size() + "</b> related files? This action cannot be undone.";
+                                + "</b> other related version(s).<br/><br/>Are you sure you want to permanently delete all <b>"
+                                + filesToDelete.size() + "</b> related files? This action cannot be undone.";
         } else {
             dialogMessage = "Are you sure you want to permanently delete " + filesToDelete.size() + " file(s)? This action cannot be undone.";
         }
 
         new AlertDialog.Builder(this)
-			.setTitle("Confirm Deletion")
-			.setMessage(Html.fromHtml(dialogMessage))
-			.setPositiveButton("Delete All", new DialogInterface.OnClickListener() {
-				@Override
-				public void onClick(DialogInterface dialog, int which) {
+                        .setTitle("Confirm Deletion")
+                        .setMessage(Html.fromHtml(dialogMessage))
+                        .setPositiveButton("Delete All", new DialogInterface.OnClickListener() {
+                                @Override
+                                public void onClick(DialogInterface dialog, int which) {
                     final String[] batchOptions = {"1 (Single)", "5 at a time", "10 at a time", "20 at a time", "30 at a time"};
                     final int[] batchValues = {1, 5, 10, 20, 30};
 
@@ -800,11 +811,11 @@ public class StorageBrowserActivity extends Activity implements StorageBrowserAd
                                 performDeletion(pathsToDelete, batchValues[index]);
                             }
                         }).show();
-				}
-			})
-			.setNeutralButton("Move to Recycle", new DialogInterface.OnClickListener() {
-				@Override
-				public void onClick(DialogInterface dialog, int which) {
+                                }
+                        })
+                        .setNeutralButton("Move to Recycle", new DialogInterface.OnClickListener() {
+                                @Override
+                                public void onClick(DialogInterface dialog, int which) {
                     AlertDialog.Builder binBuilder = new AlertDialog.Builder(StorageBrowserActivity.this);
                     binBuilder.setTitle("Choose Recycle Bin");
                     binBuilder.setItems(new CharSequence[]{"Phone Recycle Bin", "SD Card Recycle Bin"}, new DialogInterface.OnClickListener() {
@@ -814,10 +825,10 @@ public class StorageBrowserActivity extends Activity implements StorageBrowserAd
                         }
                     });
                     binBuilder.show();
-				}
-			})
-			.setNegativeButton("Cancel", null)
-			.show();
+                                }
+                        })
+                        .setNegativeButton("Cancel", null)
+                        .show();
     }
 
     private void performDeletion(List<String> filePathsToDelete, int batchSize) {
@@ -885,23 +896,23 @@ public class StorageBrowserActivity extends Activity implements StorageBrowserAd
         PopupMenu popup = new PopupMenu(this, v);
         popup.getMenuInflater().inflate(R.menu.sort_menu, popup.getMenu());
         popup.setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
-				@Override
-				public boolean onMenuItemClick(MenuItem item) {
-					int itemId = item.getItemId();
-					if (itemId == R.id.sort_by_name) {
-						currentSortOrder = SORT_BY_NAME;
-					} else if (itemId == R.id.sort_by_date) {
-						currentSortOrder = SORT_BY_DATE;
-					} else if (itemId == R.id.sort_by_size) {
-						currentSortOrder = SORT_BY_SIZE;
-					} else if (itemId == R.id.sort_by_type) {
-						currentSortOrder = SORT_BY_TYPE;
-					}
-					sortAndGroupFiles(getCurrentFiles());
-					rebuildDisplayList();
-					return true;
-				}
-			});
+                                @Override
+                                public boolean onMenuItemClick(MenuItem item) {
+                                        int itemId = item.getItemId();
+                                        if (itemId == R.id.sort_by_name) {
+                                                currentSortOrder = SORT_BY_NAME;
+                                        } else if (itemId == R.id.sort_by_date) {
+                                                currentSortOrder = SORT_BY_DATE;
+                                        } else if (itemId == R.id.sort_by_size) {
+                                                currentSortOrder = SORT_BY_SIZE;
+                                        } else if (itemId == R.id.sort_by_type) {
+                                                currentSortOrder = SORT_BY_TYPE;
+                                        }
+                                        sortAndGroupFiles(getCurrentFiles());
+                                        rebuildDisplayList();
+                                        return true;
+                                }
+                        });
         popup.show();
     }
 
@@ -917,26 +928,26 @@ public class StorageBrowserActivity extends Activity implements StorageBrowserAd
 
     private void sortAndGroupFiles(List<File> files) {
         Collections.sort(files, new Comparator<File>() {
-				@Override
-				public int compare(File f1, File f2) {
-					if (f1.isDirectory() && !f2.isDirectory()) return -1;
-					if (!f1.isDirectory() && f2.isDirectory()) return 1;
+                                @Override
+                                public int compare(File f1, File f2) {
+                                        if (f1.isDirectory() && !f2.isDirectory()) return -1;
+                                        if (!f1.isDirectory() && f2.isDirectory()) return 1;
 
-					switch (currentSortOrder) {
-						case SORT_BY_NAME:
-							return f1.getName().compareToIgnoreCase(f2.getName());
-						case SORT_BY_SIZE:
-							return Long.compare(f2.length(), f1.length());
-						case SORT_BY_TYPE:
-							String ext1 = getFileExtension(f1);
-							String ext2 = getFileExtension(f2);
-							return ext1.compareToIgnoreCase(ext2);
-						case SORT_BY_DATE:
-						default:
-							return Long.compare(f2.lastModified(), f1.lastModified());
-					}
-				}
-			});
+                                        switch (currentSortOrder) {
+                                                case SORT_BY_NAME:
+                                                        return f1.getName().compareToIgnoreCase(f2.getName());
+                                                case SORT_BY_SIZE:
+                                                        return Long.compare(f2.length(), f1.length());
+                                                case SORT_BY_TYPE:
+                                                        String ext1 = getFileExtension(f1);
+                                                        String ext2 = getFileExtension(f2);
+                                                        return ext1.compareToIgnoreCase(ext2);
+                                                case SORT_BY_DATE:
+                                                default:
+                                                        return Long.compare(f2.lastModified(), f1.lastModified());
+                                        }
+                                }
+                        });
 
         masterList.clear();
         if (currentSortOrder != SORT_BY_DATE) {
@@ -1041,15 +1052,15 @@ public class StorageBrowserActivity extends Activity implements StorageBrowserAd
 
     private void promptForSdCardPermission() {
         new AlertDialog.Builder(this)
-			.setTitle("SD Card Permission Needed")
-			.setMessage("To perform this operation on your external SD card, you must grant this app access. Please tap 'Grant', then select the root of your SD card and tap 'Allow'.")
-			.setPositiveButton("Grant", new DialogInterface.OnClickListener() {
-				@Override
-				public void onClick(DialogInterface dialog, int which) {
-					StorageUtils.requestSdCardPermission(StorageBrowserActivity.this);
-				}
-			})
-			.setNegativeButton("Cancel", null).show();
+                        .setTitle("SD Card Permission Needed")
+                        .setMessage("To perform this operation on your external SD card, you must grant this app access. Please tap 'Grant', then select the root of your SD card and tap 'Allow'.")
+                        .setPositiveButton("Grant", new DialogInterface.OnClickListener() {
+                                @Override
+                                public void onClick(DialogInterface dialog, int which) {
+                                        StorageUtils.requestSdCardPermission(StorageBrowserActivity.this);
+                                }
+                        })
+                        .setNegativeButton("Cancel", null).show();
     }
 
     @Override
@@ -1156,7 +1167,7 @@ public class StorageBrowserActivity extends Activity implements StorageBrowserAd
 
     private List<File> getSelectedFiles() {
         List<File> selectedFiles = new ArrayList<>();
-        for (Object item : masterList) {
+        for (Object item : displayList) {
             if (item instanceof StorageBrowserAdapter.FileItem) {
                 StorageBrowserAdapter.FileItem fileItem = (StorageBrowserAdapter.FileItem) item;
                 if (fileItem.isSelected()) {
@@ -1199,7 +1210,7 @@ public class StorageBrowserActivity extends Activity implements StorageBrowserAd
         serviceIntent.putExtra(FileOperationService.EXTRA_SOURCE_FILES, (Serializable) filesToOperate);
         serviceIntent.putExtra(FileOperationService.EXTRA_DESTINATION_DIR, destination);
         serviceIntent.putExtra(FileOperationService.EXTRA_OPERATION_TYPE, operation);
-        ContextCompat.startForegroundService(this, intent);
+        ContextCompat.startForegroundService(this, serviceIntent);
 
         com.hfm.app.ClipboardManager.getInstance().clear();
         updateFooterUI();
@@ -1225,22 +1236,22 @@ public class StorageBrowserActivity extends Activity implements StorageBrowserAd
         final EditText folderNameInput = dialogView.findViewById(R.id.edit_text_folder_name);
 
         builder.setView(dialogView)
-			.setPositiveButton("Create", new DialogInterface.OnClickListener() {
-				@Override
-				public void onClick(DialogInterface dialog, int id) {
-					String folderName = folderNameInput.getText().toString().trim();
-					if (!folderName.isEmpty()) {
-						File newFolder = new File(currentPath, folderName);
-						if (StorageUtils.createDirectory(StorageBrowserActivity.this, newFolder)) {
-							Toast.makeText(StorageBrowserActivity.this, "Folder created.", Toast.LENGTH_SHORT).show();
-							refreshCurrentDirectory();
-						} else {
-							Toast.makeText(StorageBrowserActivity.this, "Failed to create folder.", Toast.LENGTH_SHORT).show();
-						}
-					}
-				}
-			})
-			.setNegativeButton("Cancel", null);
+                        .setPositiveButton("Create", new DialogInterface.OnClickListener() {
+                                @Override
+                                public void onClick(DialogInterface dialog, int id) {
+                                        String folderName = folderNameInput.getText().toString().trim();
+                                        if (!folderName.isEmpty()) {
+                                                File newFolder = new File(currentPath, folderName);
+                                                if (StorageUtils.createDirectory(StorageBrowserActivity.this, newFolder)) {
+                                                        Toast.makeText(StorageBrowserActivity.this, "Folder created.", Toast.LENGTH_SHORT).show();
+                                                        refreshCurrentDirectory();
+                                                } else {
+                                                        Toast.makeText(StorageBrowserActivity.this, "Failed to create folder.", Toast.LENGTH_SHORT).show();
+                                                }
+                                        }
+                                }
+                        })
+                        .setNegativeButton("Cancel", null);
         builder.create().show();
     }
 
