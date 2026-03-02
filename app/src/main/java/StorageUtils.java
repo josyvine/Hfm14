@@ -23,6 +23,9 @@ public class StorageUtils {
     private static final String PREFS_NAME = "SDCardPrefs";
     private static final String KEY_SDCARD_URI = "sdcard_uri";
     public static final int REQUEST_CODE_SDCARD_PERMISSION = 101;
+    
+    // NEW CONSTANT FOR SD CARD RECYCLE BIN
+    public static final String SD_RECYCLE_BIN_NAME = ".HFMRecycleBin";
 
     public static void saveSdCardUri(Context context, Uri uri) {
         SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
@@ -206,7 +209,6 @@ public class StorageUtils {
         return result;
     }
 
-
     public static OutputStream getOutputStream(Context context, File targetFile) throws IOException {
         if (!isFileOnSdCard(context, targetFile)) {
             // Ensure parent directory exists for internal storage writes
@@ -286,5 +288,43 @@ public class StorageUtils {
                 Log.e(TAG, "Error closing streams", e);
             }
         }
+    }
+
+    // --- NEW METHODS FOR ENHANCEMENT 2 (DUAL RECYCLE BIN) ---
+    
+    public static DocumentFile getOrCreateSdCardRecycleBin(Context context) {
+        Uri sdCardUri = getSdCardUri(context);
+        if (sdCardUri == null) {
+            return null;
+        }
+
+        DocumentFile rootDocFile = DocumentFile.fromTreeUri(context, sdCardUri);
+        if (rootDocFile == null) {
+            return null;
+        }
+
+        DocumentFile recycleBin = rootDocFile.findFile(SD_RECYCLE_BIN_NAME);
+        if (recycleBin == null) {
+            recycleBin = rootDocFile.createDirectory(SD_RECYCLE_BIN_NAME);
+        }
+        return recycleBin;
+    }
+
+    public static boolean moveFileOnSdCardSafely(Context context, File sourceFile) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            try {
+                DocumentFile sourceDoc = getDocumentFile(context, sourceFile, false);
+                DocumentFile recycleBinDoc = getOrCreateSdCardRecycleBin(context);
+                
+                if (sourceDoc != null && recycleBinDoc != null) {
+                    Uri movedUri = DocumentsContract.moveDocument(context.getContentResolver(), 
+                            sourceDoc.getUri(), sourceDoc.getParentFile().getUri(), recycleBinDoc.getUri());
+                    return movedUri != null;
+                }
+            } catch (Exception e) {
+                Log.e(TAG, "SAF Move failed", e);
+            }
+        }
+        return false;
     }
 }
