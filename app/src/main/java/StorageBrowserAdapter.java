@@ -151,20 +151,10 @@ public class StorageBrowserAdapter extends RecyclerView.Adapter<RecyclerView.Vie
 				});
 
             if (file.isDirectory()) {
-                fileViewHolder.thumbnailImage.setImageResource(android.R.drawable.ic_menu_myplaces);
+                // UPDATED: Modern yellow folder icon
+                fileViewHolder.thumbnailImage.setImageResource(R.drawable.ic_folder_modern);
             } else {
                 int fallbackIcon = getIconForFileType(file.getName());
-                
-                // HYBRID STRATEGY:
-                // Use manual executor for things Glide might not handle perfectly based on previous logic (though Glide is generally better),
-                // but specifically ensuring we don't break existing behavior.
-                // However, since StorageBrowser previously only handled images/videos manually, replacing those with Glide is safe and better.
-                // If there was specific PDF rendering logic here previously, it should be kept.
-                // Looking at the original code, `createThumbnail` handled images and videos manually.
-                
-                // We will trust Glide for images and videos to fix the performance issue.
-                // We will keep `createThumbnail` method available but unused for standard types to ensure no compilation errors if referenced elsewhere, 
-                // but use Glide for the actual view binding.
                 
                 Glide.with(context)
                     .load(file)
@@ -178,7 +168,6 @@ public class StorageBrowserAdapter extends RecyclerView.Adapter<RecyclerView.Vie
         }
     }
 
-    // Kept for reference or future extensions, though Glide replaces its primary use.
     private Bitmap createThumbnail(File file) {
         String path = file.getAbsolutePath();
         String name = file.getName().toLowerCase();
