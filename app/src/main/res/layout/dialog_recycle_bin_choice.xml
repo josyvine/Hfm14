@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="20dp"
+    android:background="#FFFFFF">
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Move to Recycle Bin"
+        android:textColor="#000000"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:paddingBottom="10dp" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Choose where to store the deleted items. Use SD Card bin for faster performance on SD Card files."
+        android:textColor="#666666"
+        android:textSize="14sp"
+        android:paddingBottom="20dp" />
+
+    <Button
+        android:id="@+id/btn_phone_bin"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Phone Recycle Bin"
+        android:textAllCaps="false"
+        android:layout_marginBottom="10dp"
+        android:backgroundTint="?android:attr/colorPrimary"
+        android:textColor="#FFFFFF" />
+
+    <Button
+        android:id="@+id/btn_sd_bin"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="SD Card Recycle Bin"
+        android:textAllCaps="false"
+        android:backgroundTint="?android:attr/colorPrimary"
+        android:textColor="#FFFFFF" />
+
+    <Button
+        android:id="@+id/btn_cancel_bin"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Cancel"
+        android:textAllCaps="false"
+        android:layout_marginTop="10dp"
+        style="?android:attr/borderlessButtonStyle"
+        android:textColor="?android:attr/colorPrimary" />
+
+</LinearLayout>
