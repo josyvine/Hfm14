@@ -332,4 +332,4 @@ public class StorageUtils {
     public static boolean moveFileOnSdCardSafely(Context context, File sourceFile) {
         return moveFileOnSdCardSafely(context, sourceFile, getOrCreateSdCardRecycleBin(context));
     }
-}
+} 
