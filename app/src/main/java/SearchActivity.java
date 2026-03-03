@@ -1298,8 +1298,8 @@ public class SearchActivity extends Activity implements SearchAdapter.OnItemClic
                     binBuilder.setTitle("Choose Recycle Bin");
                     binBuilder.setItems(new CharSequence[]{"Phone Recycle Bin", "SD Card Recycle Bin"}, new DialogInterface.OnClickListener() {
                         @Override
-                        public void onClick(DialogInterface dialogInterface, int which) {
-                            moveToRecycleBin(selectedResults, which == 1);
+                        public void onClick(DialogInterface dialogInterface, int whichBin) {
+                            moveToRecycleBin(selectedResults, whichBin == 1);
                         }
                     });
                     binBuilder.show();
@@ -1620,7 +1620,7 @@ public class SearchActivity extends Activity implements SearchAdapter.OnItemClic
                     }
                     if (moveSuccess) {
                         movedResults.add(result);
-                        context.sendBroadcast(new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE, Uri.fromFile(sourceFile)));
+                        // UPDATE: Removed context.sendBroadcast(ACTION_MEDIA_SCANNER_SCAN_FILE) to prevent intent spam
                     }
                 }
             }
