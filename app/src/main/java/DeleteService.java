@@ -30,6 +30,11 @@ import android.Manifest;
 public class DeleteService extends Service {
 
     private static final String TAG = "DeleteService";
+    
+    // Broadcast constants for the Monitor Popup
+    public static final String ACTION_DELETE_LOG = "com.hfm.app.action.DELETE_LOG";
+    public static final String EXTRA_LOG_MESSAGE = "extra_log_message";
+
     public static final String ACTION_DELETE_COMPLETE = "com.hfm.app.action.DELETE_COMPLETE";
     public static final String EXTRA_FILES_TO_DELETE = "com.hfm.app.extra.FILES_TO_DELETE";
     public static final String EXTRA_DELETED_COUNT = "com.hfm.app.extra.DELETED_COUNT";
@@ -47,7 +52,6 @@ public class DeleteService extends Service {
     public void onCreate() {
         super.onCreate();
         notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-        // Use a fixed pool to prevent over-loading the System Media Database
         executorService = Executors.newFixedThreadPool(4);
         createNotificationChannel();
     }
@@ -83,6 +87,11 @@ public class DeleteService extends Service {
             isServiceForeground = true;
         }
 
+        // AUTO-OPEN THE MONITOR POPUP
+        Intent monitorIntent = new Intent(this, DeletionMonitorActivity.class);
+        monitorIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        startActivity(monitorIntent);
+
         executorService.execute(new Runnable() {
             @Override
             public void run() {
@@ -104,51 +113,67 @@ public class DeleteService extends Service {
         int deletedCount = 0;
         ContentResolver resolver = getContentResolver();
 
-        // IMMEDIATELY update notification so it doesn't stay on "Initialising"
+        sendLog("Started job #" + jobId + " for " + totalFiles + " files.");
         notificationManager.notify(jobId, createNotification("Deleting " + totalFiles + " files", "Starting...", 0, totalFiles, true));
 
         for (int i = 0; i < totalFiles; i++) {
             String path = filePaths.get(i);
             File file = new File(path);
+            String fileName = file.getName();
+            
+            sendLog("Initialising: " + fileName);
+
             boolean deleted = false;
 
             // 1. FAST DELETE (Java Path)
             if (file.exists()) {
                 deleted = file.delete();
+                if (deleted) sendLog("[FAST] Java Deleted: " + fileName);
             }
 
-            // 2. SLOW DELETE FALLBACK (SAF Path - only if Java fails)
+            // 2. SLOW DELETE FALLBACK (SAF Path)
             if (!deleted && file.exists()) {
+                sendLog("[WAIT] SAF request for: " + fileName + " (Communicating with System OS...)");
                 deleted = StorageUtils.deleteFile(DeleteService.this, file);
+                if (deleted) sendLog("[SLOW] SAF Deleted: " + fileName);
+                else sendLog("[FAIL] SAF could not remove: " + fileName);
             }
 
             // 3. CLEAN DATABASE
             if (deleted || !file.exists()) {
                 deletedCount++;
                 try {
+                    sendLog("Database: Removing " + fileName + " from MediaStore.");
                     resolver.delete(MediaStore.Files.getContentUri("external"), 
                         MediaStore.Files.FileColumns.DATA + "=?", new String[]{path});
-                } catch (Exception ignored) {}
+                } catch (Exception e) {
+                    sendLog("Database Error: " + e.getMessage());
+                }
             }
 
-            // UPDATE NOTIFICATION REGULARLY (Every 2 files or 100% update)
-            // This prevents the "Stuck" look because the UI refreshes frequently.
             if (i % 2 == 0 || i == totalFiles - 1) {
                 String progressText = "Processed " + (i + 1) + " of " + totalFiles;
                 notificationManager.notify(jobId, createNotification("Deleting Files", progressText, i + 1, totalFiles, true));
             }
         }
 
-        // Final Broadcast
+        sendLog("Job complete. Total removed: " + deletedCount);
+
         Intent broadcastIntent = new Intent(ACTION_DELETE_COMPLETE);
         broadcastIntent.putExtra(EXTRA_DELETED_COUNT, deletedCount);
         LocalBroadcastManager.getInstance(this).sendBroadcast(broadcastIntent);
 
-        // Final notification state
         notificationManager.notify(jobId, createNotification("Done", "Removed " + deletedCount + " files", 100, 100, false));
         
         try { Thread.sleep(2000); } catch (InterruptedException ignored) {}
         notificationManager.cancel(jobId);
+    }
+
+    private void sendLog(String msg) {
+        Intent intent = new Intent(ACTION_DELETE_LOG);
+        intent.putExtra(EXTRA_LOG_MESSAGE, msg);
+        LocalBroadcastManager.getInstance(this).sendBroadcast(intent);
+        Log.d(TAG, msg);
     }
 
     private void checkAndStop() {
@@ -180,4 +205,10 @@ public class DeleteService extends Service {
     }
 
     @Nullable @Override public IBinder onBind(Intent intent) { return null; }
+
+    @Override
+    public void onDestroy() {
+        if (executorService != null) executorService.shutdownNow();
+        super.onDestroy();
+    }
 }
