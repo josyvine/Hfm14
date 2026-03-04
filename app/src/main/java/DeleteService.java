@@ -4,10 +4,12 @@ import android.app.IntentService;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
-import android.content.Intent;
+import android.content.ContentResolver;
 import android.content.Context;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Build;
+import android.provider.MediaStore;
 import android.util.Log;
 
 import androidx.core.app.NotificationCompat;
@@ -50,15 +52,18 @@ public class DeleteService extends IntentService {
             return;
         }
 
-        // Pull from Bridge to avoid crash
+        // --- FIX 1: USE BRIDGE TO PREVENT CRASH ---
+        // Check bridge first, fall back to intent (legacy support)
         ArrayList<String> filePathsToDelete = FileBridge.mFilesToDelete;
         if (filePathsToDelete != null && !filePathsToDelete.isEmpty()) {
-            FileBridge.mFilesToDelete = new ArrayList<>(); 
+            // Retrieve and clear immediately to free memory
+            FileBridge.mFilesToDelete = new ArrayList<>();
         } else {
             filePathsToDelete = intent.getStringArrayListExtra(EXTRA_FILES_TO_DELETE);
         }
 
-        int batchSize = intent.getIntExtra("batch_size", 1); // Default to 1 if not set, but we usually set higher
+        // Enhancement 4: Retrieve chosen batch size
+        int batchSize = intent.getIntExtra("batch_size", 1);
 
         if (filePathsToDelete == null || filePathsToDelete.isEmpty()) {
             return;
@@ -67,6 +72,7 @@ public class DeleteService extends IntentService {
         int totalFiles = filePathsToDelete.size();
         int deletedCount = 0;
 
+        // --- UPDATE 2: Check for notification permission before showing notifications ---
         boolean canShowNotification = false;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED) {
@@ -80,30 +86,63 @@ public class DeleteService extends IntentService {
             startForeground(NOTIFICATION_ID, createNotification("Starting deletion...", 0, totalFiles));
         }
 
-        // RESTORED: Batch processing logic. 
-        // We process in chunks to keep the UI responsive, but use the FAST FileUtils batch delete.
-        int processingBatchSize = 50; // Process 50 at a time for speed balance
-        
-        for (int i = 0; i < totalFiles; i += processingBatchSize) {
-            int end = Math.min(i + processingBatchSize, totalFiles);
-            List<String> batchPaths = filePathsToDelete.subList(i, end);
-            List<File> batchFiles = new ArrayList<>();
+        ContentResolver resolver = getContentResolver();
 
-            for (String path : batchPaths) {
-                batchFiles.add(new File(path));
+        // Logic for Batch Processing
+        for (int i = 0; i < totalFiles; i += batchSize) {
+            int end = Math.min(i + batchSize, totalFiles);
+            List<String> batchPaths = filePathsToDelete.subList(i, end);
+            
+            // --- FIX 2: HYBRID DELETE FOR SPEED + RELIABILITY ---
+
+            // A. Batch Database Delete (FAST)
+            // Removes items from Gallery/MediaStore instantly so user sees results immediately.
+            try {
+                StringBuilder selection = new StringBuilder(MediaStore.Files.FileColumns.DATA + " IN (");
+                String[] selectionArgs = new String[batchPaths.size()];
+                for (int j = 0; j < batchPaths.size(); j++) {
+                    selection.append("?");
+                    if (j < batchPaths.size() - 1) selection.append(",");
+                    selectionArgs[j] = batchPaths.get(j);
+                }
+                selection.append(")");
+                resolver.delete(MediaStore.Files.getContentUri("external"), selection.toString(), selectionArgs);
+            } catch (Exception e) {
+                Log.e(TAG, "Database batch delete error", e);
             }
 
-            // CRITICAL FIX: Use FileUtils.deleteFileBatch. 
-            // This performs a single SQL delete for the whole batch (INSTANT)
-            // instead of looping SAF calls (SLOW).
-            deletedCount += FileUtils.deleteFileBatch(this, batchFiles);
+            // B. Physical File Delete
+            for (String path : batchPaths) {
+                File file = new File(path);
+                boolean success = false;
 
+                if (file.exists()) {
+                    // Try Standard Java Delete (Fastest - Works for Internal Storage)
+                    if (file.delete()) {
+                        success = true;
+                    } 
+                    // If failed, it might be SD Card on Android 11+. Use StorageUtils (SAF)
+                    else if (StorageUtils.deleteFile(this, file)) {
+                        success = true;
+                    }
+                } else {
+                    // File already gone (likely deleted by database call or OS)
+                    success = true;
+                }
+
+                if (success) {
+                    deletedCount++;
+                }
+            }
+
+            // --- UPDATE 4: Update Notification ---
             if (canShowNotification) {
                 String progressText = "Deleted " + end + " of " + totalFiles + "...";
                 notificationManager.notify(NOTIFICATION_ID, createNotification(progressText, end, totalFiles));
             }
         }
 
+        // Send completion broadcast
         Intent broadcastIntent = new Intent(ACTION_DELETE_COMPLETE);
         broadcastIntent.putExtra(EXTRA_DELETED_COUNT, deletedCount);
         LocalBroadcastManager.getInstance(this).sendBroadcast(broadcastIntent);
@@ -120,7 +159,7 @@ public class DeleteService extends IntentService {
         if (max > 0) {
             builder.setProgress(max, progress, false);
         } else {
-            builder.setProgress(0, 0, true);
+            builder.setProgress(0, 0, true); // Indeterminate progress
         }
 
         return builder.build();
