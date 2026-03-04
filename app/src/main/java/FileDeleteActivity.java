@@ -86,10 +86,6 @@ public class FileDeleteActivity extends Activity {
 
     private List<File> mFilesPendingPermission;
     private Runnable mPendingOperation;
-    
-    // For batch deletion permission handling
-    private ArrayList<String> mPendingFilePathsToDelete;
-    private int mPendingBatchSize;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -114,7 +110,7 @@ public class FileDeleteActivity extends Activity {
 
         setupRecyclerView();
         setupListeners();
-        setupBroadcastReceivers();
+        setupBroadcastReceivers(); // This was missing in the previous pasted code
         updateSelectionCount();
     }
 
@@ -133,18 +129,18 @@ public class FileDeleteActivity extends Activity {
 
     private void setupRecyclerView() {
         adapter = new FileDeleteAdapter(this, fileList, new FileDeleteAdapter.OnItemClickListener() {
-				@Override
-				public void onItemClick(int position) {
-					FileDeleteAdapter.FileItem item = adapter.getItems().get(position);
-					item.setSelected(!item.isSelected());
-					adapter.notifyItemChanged(position);
-					updateSelectionCount();
-				}
+            @Override
+            public void onItemClick(int position) {
+                FileDeleteAdapter.FileItem item = adapter.getItems().get(position);
+                item.setSelected(!item.isSelected());
+                adapter.notifyItemChanged(position);
+                updateSelectionCount();
+            }
 
-				@Override
-				public void onItemLongClick(int position) {
-					final File selectedFile = adapter.getItems().get(position).getFile();
-					new AlertDialog.Builder(FileDeleteActivity.this)
+            @Override
+            public void onItemLongClick(int position) {
+                final File selectedFile = adapter.getItems().get(position).getFile();
+                new AlertDialog.Builder(FileDeleteActivity.this)
                         .setItems(new CharSequence[]{"Open", "Details"}, new DialogInterface.OnClickListener() {
                             @Override
                             public void onClick(DialogInterface dialog, int which) {
@@ -158,44 +154,44 @@ public class FileDeleteActivity extends Activity {
                             }
                         })
                         .show();
-				}
+            }
 
-				@Override
-				public void onSelectionChanged() {
-					updateSelectionCount();
-				}
-			});
+            @Override
+            public void onSelectionChanged() {
+                updateSelectionCount();
+            }
+        });
         fileGrid.setLayoutManager(new GridLayoutManager(this, 3));
         fileGrid.setAdapter(adapter);
     }
 
     private void setupListeners() {
         backButton.setOnClickListener(new View.OnClickListener() {
-				@Override
-				public void onClick(View v) {
-					finish();
-				}
-			});
+            @Override
+            public void onClick(View v) {
+                finish();
+            }
+        });
 
         selectAllButton.setOnClickListener(new View.OnClickListener() {
-				@Override
-				public void onClick(View v) {
-					isAllSelected = !isAllSelected;
-					adapter.selectAll(isAllSelected);
-					if (isAllSelected) {
-						selectAllButton.setText("Deselect All");
-					} else {
-						selectAllButton.setText("Select All");
-					}
-				}
-			});
+            @Override
+            public void onClick(View v) {
+                isAllSelected = !isAllSelected;
+                adapter.selectAll(isAllSelected);
+                if (isAllSelected) {
+                    selectAllButton.setText("Deselect All");
+                } else {
+                    selectAllButton.setText("Select All");
+                }
+            }
+        });
 
         deleteButton.setOnClickListener(new View.OnClickListener() {
-				@Override
-				public void onClick(View v) {
-					showFileOperationsDialog();
-				}
-			});
+            @Override
+            public void onClick(View v) {
+                showFileOperationsDialog();
+            }
+        });
     }
 
     private void updateSelectionCount() {
@@ -250,13 +246,13 @@ public class FileDeleteActivity extends Activity {
         Button recycleButton = dialogView.findViewById(R.id.button_move_to_recycle);
 
         detailsButton.setOnClickListener(new View.OnClickListener() {
-				@Override
-				public void onClick(View v) {
-					showDetailsDialog(selectedFiles);
-					dialog.dismiss();
-				}
-			});
-        
+            @Override
+            public void onClick(View v) {
+                showDetailsDialog(selectedFiles);
+                dialog.dismiss();
+            }
+        });
+
         sendToDropZoneButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -270,72 +266,72 @@ public class FileDeleteActivity extends Activity {
         });
 
         compressButton.setOnClickListener(new View.OnClickListener() {
-				@Override
-				public void onClick(View v) {
-					File parentDir = selectedFiles.get(0).getParentFile();
-					if (parentDir != null) {
-						ArchiveUtils.startCompression(FileDeleteActivity.this, selectedFiles, parentDir);
-						Toast.makeText(FileDeleteActivity.this, "Compression started in background.", Toast.LENGTH_SHORT).show();
-					} else {
-						Toast.makeText(FileDeleteActivity.this, "Cannot determine destination for archive.", Toast.LENGTH_SHORT).show();
-					}
-					dialog.dismiss();
-				}
-			});
+            @Override
+            public void onClick(View v) {
+                File parentDir = selectedFiles.get(0).getParentFile();
+                if (parentDir != null) {
+                    ArchiveUtils.startCompression(FileDeleteActivity.this, selectedFiles, parentDir);
+                    Toast.makeText(FileDeleteActivity.this, "Compression started in background.", Toast.LENGTH_SHORT).show();
+                } else {
+                    Toast.makeText(FileDeleteActivity.this, "Cannot determine destination for archive.", Toast.LENGTH_SHORT).show();
+                }
+                dialog.dismiss();
+            }
+        });
 
         copyButton.setOnClickListener(new View.OnClickListener() {
-				@Override
-				public void onClick(View v) {
-					com.hfm.app.ClipboardManager.getInstance().setItems(selectedFiles, com.hfm.app.ClipboardManager.Operation.COPY);
-					Toast.makeText(FileDeleteActivity.this, selectedFiles.size() + " item(s) ready to copy. Navigate to a folder to paste.", Toast.LENGTH_LONG).show();
-					dialog.dismiss();
-				}
-			});
+            @Override
+            public void onClick(View v) {
+                com.hfm.app.ClipboardManager.getInstance().setItems(selectedFiles, com.hfm.app.ClipboardManager.Operation.COPY);
+                Toast.makeText(FileDeleteActivity.this, selectedFiles.size() + " item(s) ready to copy. Navigate to a folder to paste.", Toast.LENGTH_LONG).show();
+                dialog.dismiss();
+            }
+        });
 
         moveButton.setOnClickListener(new View.OnClickListener() {
-				@Override
-				public void onClick(View v) {
-					com.hfm.app.ClipboardManager.getInstance().setItems(selectedFiles, com.hfm.app.ClipboardManager.Operation.MOVE);
-					Toast.makeText(FileDeleteActivity.this, selectedFiles.size() + " item(s) ready to move. Navigate to a folder to paste.", Toast.LENGTH_LONG).show();
-					dialog.dismiss();
-				}
-			});
+            @Override
+            public void onClick(View v) {
+                com.hfm.app.ClipboardManager.getInstance().setItems(selectedFiles, com.hfm.app.ClipboardManager.Operation.MOVE);
+                Toast.makeText(FileDeleteActivity.this, selectedFiles.size() + " item(s) ready to move. Navigate to a folder to paste.", Toast.LENGTH_LONG).show();
+                dialog.dismiss();
+            }
+        });
 
         hideButton.setOnClickListener(new View.OnClickListener() {
-				@Override
-				public void onClick(View v) {
-					Intent intent = new Intent(FileDeleteActivity.this, FileHiderActivity.class);
-					intent.putExtra(RitualRecordTapsActivity.EXTRA_FILES_TO_HIDE, (Serializable) selectedFiles);
-					startActivity(intent);
-					dialog.dismiss();
-				}
-			});
+            @Override
+            public void onClick(View v) {
+                Intent intent = new Intent(FileDeleteActivity.this, FileHiderActivity.class);
+                intent.putExtra(RitualRecordTapsActivity.EXTRA_FILES_TO_HIDE, (Serializable) selectedFiles);
+                startActivity(intent);
+                dialog.dismiss();
+            }
+        });
 
         deleteButton.setOnClickListener(new View.OnClickListener() {
-				@Override
-				public void onClick(View v) {
-					initiateDeletionProcess();
-					dialog.dismiss();
-				}
-			});
+            @Override
+            public void onClick(View v) {
+                initiateDeletionProcess();
+                dialog.dismiss();
+            }
+        });
 
         recycleButton.setOnClickListener(new View.OnClickListener() {
-				@Override
-				public void onClick(View v) {
-                    // Show dialog to choose between Phone or SD Card Recycle Bin
-                    AlertDialog.Builder binBuilder = new AlertDialog.Builder(FileDeleteActivity.this);
-                    binBuilder.setTitle("Choose Recycle Bin");
-                    binBuilder.setItems(new CharSequence[]{"Phone Recycle Bin", "SD Card Recycle Bin"}, new DialogInterface.OnClickListener() {
-                        @Override
-                        public void onClick(DialogInterface dialogInterface, int which) {
-                            // which == 0 -> Phone, which == 1 -> SD Card
-                            new MoveToRecycleTask(selectedFiles, which == 1).execute();
-                        }
-                    });
-                    binBuilder.show();
-					dialog.dismiss();
-				}
-			});
+            @Override
+            public void onClick(View v) {
+                // Show dialog to choose between Phone or SD Card Recycle Bin
+                AlertDialog.Builder binBuilder = new AlertDialog.Builder(FileDeleteActivity.this);
+                binBuilder.setTitle("Choose Recycle Bin");
+                binBuilder.setItems(new CharSequence[]{"Phone Recycle Bin", "SD Card Recycle Bin"}, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialogInterface, int which) {
+                        // which == 0 -> Phone, which == 1 -> SD Card
+                        new MoveToRecycleTask(selectedFiles, which == 1).execute();
+                    }
+                });
+                binBuilder.show();
+                dialog.dismiss();
+            }
+        });
 
         dialog.show();
     }
@@ -378,30 +374,29 @@ public class FileDeleteActivity extends Activity {
         boolean isConnected = activeNetwork != null && activeNetwork.isConnectedOrConnecting();
         moreButton.setEnabled(ApiKeyManager.getApiKey(this) != null && isConnected);
 
-
         moreButton.setOnClickListener(new View.OnClickListener() {
-				@Override
-				public void onClick(View v) {
-					analyzer.analyze(files);
-				}
-			});
+            @Override
+            public void onClick(View v) {
+                analyzer.analyze(files);
+            }
+        });
 
         copyButton.setOnClickListener(new View.OnClickListener() {
-				@Override
-				public void onClick(View v) {
-					ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
-					ClipData clip = ClipData.newPlainText("AI Summary", aiDetailsText.getText());
-					clipboard.setPrimaryClip(clip);
-					Toast.makeText(FileDeleteActivity.this, "Summary copied to clipboard.", Toast.LENGTH_SHORT).show();
-				}
-			});
+            @Override
+            public void onClick(View v) {
+                ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+                ClipData clip = ClipData.newPlainText("AI Summary", aiDetailsText.getText());
+                clipboard.setPrimaryClip(clip);
+                Toast.makeText(FileDeleteActivity.this, "Summary copied to clipboard.", Toast.LENGTH_SHORT).show();
+            }
+        });
 
         closeButton.setOnClickListener(new View.OnClickListener() {
-				@Override
-				public void onClick(View v) {
-					dialog.dismiss();
-				}
-			});
+            @Override
+            public void onClick(View v) {
+                dialog.dismiss();
+            }
+        });
 
         dialog.show();
     }
@@ -470,20 +465,24 @@ public class FileDeleteActivity extends Activity {
         return sb.toString();
     }
 
+    // --- OPTIMIZED DELETION PROCESS ---
+
     private void initiateDeletionProcess() {
         final List<File> initiallySelectedFiles = getSelectedFiles();
+
         if (initiallySelectedFiles.isEmpty()) {
             Toast.makeText(this, "No files selected.", Toast.LENGTH_SHORT).show();
             return;
         }
-        
-        // Start background pre-check
+
+        // Start background pre-check to prevent UI freeze
         new PreDeletionCheckTask().execute();
     }
-    
+
+    // Optimized AsyncTask using HashMap/HashSet
     private class PreDeletionCheckTask extends AsyncTask<Void, Void, PreDeletionResults> {
         private AlertDialog progressDialog;
-        
+
         @Override
         protected void onPreExecute() {
             progressDialog = new AlertDialog.Builder(FileDeleteActivity.this)
@@ -492,13 +491,10 @@ public class FileDeleteActivity extends Activity {
                     .create();
             progressDialog.show();
         }
-        
+
         @Override
         protected PreDeletionResults doInBackground(Void... voids) {
-            // Re-acquire selection in background
             List<File> filesToConfirm = getSelectedFiles();
-            
-            // Optimization: Use a Map to cache folder contents to prevent O(N^2) disk reads
             Set<File> masterDeleteSet = new HashSet<>();
             Map<String, File[]> dirCache = new HashMap<>();
 
@@ -510,6 +506,7 @@ public class FileDeleteActivity extends Activity {
                     File parentDir = selectedFile.getParentFile();
                     if (parentDir != null) {
                         String parentPath = parentDir.getAbsolutePath();
+                        // Cache directory contents to avoid repeated disk reads
                         if (!dirCache.containsKey(parentPath)) {
                             dirCache.put(parentPath, parentDir.listFiles());
                         }
@@ -525,7 +522,7 @@ public class FileDeleteActivity extends Activity {
                     }
                 }
             }
-
+            
             List<File> finalToDelete = new ArrayList<>(masterDeleteSet);
             boolean requiresSdCardPermission = false;
             for (File file : finalToDelete) {
@@ -534,7 +531,7 @@ public class FileDeleteActivity extends Activity {
                     break;
                 }
             }
-            
+
             return new PreDeletionResults(finalToDelete, requiresSdCardPermission, filesToConfirm.size());
         }
 
@@ -569,49 +566,47 @@ public class FileDeleteActivity extends Activity {
         if (filesToDelete.size() > originalSelectionCount) {
             int siblingCount = filesToDelete.size() - originalSelectionCount;
             dialogMessage = "You selected <b>" + originalSelectionCount + "</b> file(s), but we found <b>" + siblingCount
-				+ "</b> other related version(s) (e.g., with map overlays).<br/><br/>Are you sure you want to permanently delete all <b>"
-				+ filesToDelete.size() + "</b> related files? This action cannot be undone.";
+                    + "</b> other related version(s).<br/><br/>Are you sure you want to permanently delete all <b>"
+                    + filesToDelete.size() + "</b> related files? This action cannot be undone.";
         } else {
             dialogMessage = "Are you sure you want to permanently delete " + filesToDelete.size() + " file(s)? This action cannot be undone.";
         }
 
         new AlertDialog.Builder(this)
-			.setTitle("Confirm Deletion")
-			.setMessage(Html.fromHtml(dialogMessage))
-			.setPositiveButton("Delete All", new DialogInterface.OnClickListener() {
-				@Override
-				public void onClick(DialogInterface dialog, int which) {
-                    // Show Batch Deletion Dialog
-                    final String[] batchOptions = {"1 (Single)", "5 at a time", "10 at a time", "20 at a time", "30 at a time"};
-                    final int[] batchValues = {1, 5, 10, 20, 30};
+                .setTitle("Confirm Deletion")
+                .setMessage(Html.fromHtml(dialogMessage))
+                .setPositiveButton("Delete All", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        final String[] batchOptions = {"1 (Single)", "5 at a time", "10 at a time", "20 at a time", "30 at a time"};
+                        final int[] batchValues = {1, 5, 10, 20, 30};
 
-                    new AlertDialog.Builder(FileDeleteActivity.this)
-                        .setTitle("Select Deletion Speed")
-                        .setItems(batchOptions, new DialogInterface.OnClickListener() {
+                        new AlertDialog.Builder(FileDeleteActivity.this)
+                                .setTitle("Select Deletion Speed")
+                                .setItems(batchOptions, new DialogInterface.OnClickListener() {
+                                    @Override
+                                    public void onClick(DialogInterface dialogInterface, int index) {
+                                        performDeletion(filesToDelete, batchValues[index]);
+                                    }
+                                }).show();
+                    }
+                })
+                .setNeutralButton("Move to Recycle", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        AlertDialog.Builder binBuilder = new AlertDialog.Builder(FileDeleteActivity.this);
+                        binBuilder.setTitle("Choose Recycle Bin");
+                        binBuilder.setItems(new CharSequence[]{"Phone Recycle Bin", "SD Card Recycle Bin"}, new DialogInterface.OnClickListener() {
                             @Override
-                            public void onClick(DialogInterface dialogInterface, int index) {
-                                performDeletion(filesToDelete, batchValues[index]);
+                            public void onClick(DialogInterface dialogInterface, int whichBin) {
+                                new MoveToRecycleTask(filesToDelete, whichBin == 1).execute();
                             }
-                        }).show();
-				}
-			})
-			.setNeutralButton("Move to Recycle", new DialogInterface.OnClickListener() {
-				@Override
-				public void onClick(DialogInterface dialog, int which) {
-                    // Show dialog to choose between Phone or SD Card Recycle Bin
-                    AlertDialog.Builder binBuilder = new AlertDialog.Builder(FileDeleteActivity.this);
-                    binBuilder.setTitle("Choose Recycle Bin");
-                    binBuilder.setItems(new CharSequence[]{"Phone Recycle Bin", "SD Card Recycle Bin"}, new DialogInterface.OnClickListener() {
-                        @Override
-                        public void onClick(DialogInterface dialogInterface, int whichBin) {
-                            new MoveToRecycleTask(filesToDelete, whichBin == 1).execute();
-                        }
-                    });
-                    binBuilder.show();
-				}
-			})
-			.setNegativeButton("Cancel", null)
-			.show();
+                        });
+                        binBuilder.show();
+                    }
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
     }
 
     private void performDeletion(List<File> filesToDelete, int batchSize) {
@@ -619,7 +614,7 @@ public class FileDeleteActivity extends Activity {
         for (File file : filesToDelete) {
             filePathsToDelete.add(file.getAbsolutePath());
         }
-        
+
         // LOAD BRIDGE to prevent crash on massive selections
         FileBridge.mFilesToDelete = filePathsToDelete;
 
@@ -628,23 +623,22 @@ public class FileDeleteActivity extends Activity {
         deletionProgressText.setText("Starting deletion...");
 
         Intent intent = new Intent(this, DeleteService.class);
-        // Note: We don't put the huge array list into extra, the service reads from Bridge
         intent.putExtra("batch_size", batchSize); 
         ContextCompat.startForegroundService(this, intent);
     }
 
     private void promptForSdCardPermission() {
         new AlertDialog.Builder(this)
-			.setTitle("SD Card Permission Needed")
-			.setMessage("To delete files on your external SD card, you must grant this app access. Please tap 'Grant', then select the root of your SD card and tap 'Allow'.")
-			.setPositiveButton("Grant", new DialogInterface.OnClickListener() {
-				@Override
-				public void onClick(DialogInterface dialog, int which) {
-					StorageUtils.requestSdCardPermission(FileDeleteActivity.this);
-				}
-			})
-			.setNegativeButton("Cancel", null)
-			.show();
+                .setTitle("SD Card Permission Needed")
+                .setMessage("To delete files on your external SD card, you must grant this app access. Please tap 'Grant', then select the root of your SD card and tap 'Allow'.")
+                .setPositiveButton("Grant", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        StorageUtils.requestSdCardPermission(FileDeleteActivity.this);
+                    }
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
     }
 
     @Override
@@ -656,15 +650,13 @@ public class FileDeleteActivity extends Activity {
                 Uri treeUri = data.getData();
                 if (treeUri != null) {
                     getContentResolver().takePersistableUriPermission(treeUri,
-																	  Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+                            Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
 
                     StorageUtils.saveSdCardUri(this, treeUri);
                     Toast.makeText(this, "SD card access granted.", Toast.LENGTH_SHORT).show();
 
                     if (mPendingOperation != null) {
                         mPendingOperation.run();
-                    } else if (mFilesPendingPermission != null && !mFilesPendingPermission.isEmpty()) {
-                        showDeleteConfirmationDialog(mFilesPendingPermission, mFilesPendingPermission.size());
                     }
                 }
             } else {
@@ -675,6 +667,147 @@ public class FileDeleteActivity extends Activity {
         }
     }
 
+    // Restored methods for file viewing
+    private void openFileViewer(final File file) {
+        new AsyncTask<Void, Void, Intent>() {
+            @Override
+            protected Intent doInBackground(Void... voids) {
+                String path = file.getAbsolutePath();
+                String name = file.getName();
+                int category = getFileCategory(name);
+                Intent intent = null;
+
+                if (category == CATEGORY_IMAGES || category == CATEGORY_VIDEOS || category == CATEGORY_AUDIO) {
+                    ArrayList<String> fileList = getSiblingFilesForViewer(file, category);
+                    int currentIndex = fileList.indexOf(path);
+                    if (currentIndex == -1) {
+                        return null;
+                    }
+
+                    if (category == CATEGORY_IMAGES) {
+                        intent = new Intent(FileDeleteActivity.this, ImageViewerActivity.class);
+                        intent.putStringArrayListExtra(ImageViewerActivity.EXTRA_FILE_PATH_LIST, fileList);
+                        intent.putExtra(ImageViewerActivity.EXTRA_CURRENT_INDEX, currentIndex);
+                    } else if (category == CATEGORY_VIDEOS) {
+                        intent = new Intent(FileDeleteActivity.this, VideoViewerActivity.class);
+                        intent.putStringArrayListExtra(VideoViewerActivity.EXTRA_FILE_PATH_LIST, fileList);
+                        intent.putExtra(VideoViewerActivity.EXTRA_CURRENT_INDEX, currentIndex);
+                    } else if (category == CATEGORY_AUDIO) {
+                        intent = new Intent(FileDeleteActivity.this, AudioPlayerActivity.class);
+                        intent.putStringArrayListExtra(AudioPlayerActivity.EXTRA_FILE_PATH_LIST, fileList);
+                        intent.putExtra(AudioPlayerActivity.EXTRA_CURRENT_INDEX, currentIndex);
+                    }
+                } else {
+                    if (name.toLowerCase(Locale.ROOT).endsWith(".pdf")) {
+                        intent = new Intent(FileDeleteActivity.this, PdfViewerActivity.class);
+                    } else {
+                        intent = new Intent(FileDeleteActivity.this, TextViewerActivity.class);
+                    }
+                    intent.putExtra(TextViewerActivity.EXTRA_FILE_PATH, path);
+                }
+                return intent;
+            }
+
+            @Override
+            protected void onPostExecute(Intent intent) {
+                if (intent != null) {
+                    startActivity(intent);
+                } else {
+                    Toast.makeText(FileDeleteActivity.this, "Error opening file.", Toast.LENGTH_SHORT).show();
+                }
+            }
+        }.execute();
+    }
+
+    private ArrayList<String> getSiblingFilesForViewer(File currentFile, final int category) {
+        ArrayList<String> siblingFiles = new ArrayList<>();
+        File parentDir = currentFile.getParentFile();
+        if (parentDir == null || !parentDir.isDirectory()) {
+            siblingFiles.add(currentFile.getAbsolutePath());
+            return siblingFiles;
+        }
+
+        File[] filesInDir = parentDir.listFiles();
+        if (filesInDir != null) {
+            List<File> sortedFiles = new ArrayList<>(Arrays.asList(filesInDir));
+            Collections.sort(sortedFiles, new Comparator<File>() {
+                @Override
+                public int compare(File f1, File f2) {
+                    return f1.getName().compareToIgnoreCase(f2.getName());
+                }
+            });
+
+            for (File file : sortedFiles) {
+                if (file.isFile() && getFileCategory(file.getName()) == category) {
+                    siblingFiles.add(file.getAbsolutePath());
+                }
+            }
+        }
+        return siblingFiles;
+    }
+    
+    private int getFileCategory(String fileName) {
+        String extension = "";
+        int i = fileName.lastIndexOf('.');
+        if (i > 0) {
+            extension = fileName.substring(i + 1).toLowerCase(Locale.ROOT);
+        }
+
+        List<String> imageExtensions = Arrays.asList("jpg", "jpeg", "png", "gif", "bmp", "webp");
+        List<String> videoExtensions = Arrays.asList("mp4", "3gp", "mkv", "webm", "avi");
+        List<String> audioExtensions = Arrays.asList("mp3", "wav", "ogg", "m4a", "aac", "flac");
+        List<String> scriptExtensions = Arrays.asList("json", "xml", "html", "js", "css", "java", "kt", "py", "c", "cpp", "h", "cs", "php", "rb", "go", "swift", "sh", "bat", "ps1", "ini", "cfg", "conf", "md", "prop", "gradle", "pro", "sql");
+        List<String> docExtensions = Arrays.asList("pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx", "txt", "rtf", "csv");
+
+        if (imageExtensions.contains(extension)) return CATEGORY_IMAGES;
+        if (videoExtensions.contains(extension)) return CATEGORY_VIDEOS;
+        if (audioExtensions.contains(extension)) return CATEGORY_AUDIO;
+        if (scriptExtensions.contains(extension)) return CATEGORY_SCRIPTS;
+        if (docExtensions.contains(extension)) return CATEGORY_DOCS;
+        return CATEGORY_OTHER;
+    }
+
+    private void setupBroadcastReceivers() {
+        deleteCompletionReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                int deletedCount = intent.getIntExtra(DeleteService.EXTRA_DELETED_COUNT, 0);
+                Toast.makeText(FileDeleteActivity.this, "Deletion complete. " + deletedCount + " files removed.", Toast.LENGTH_LONG).show();
+
+                deletionProgressLayout.setVisibility(View.GONE);
+
+                Intent resultIntent = new Intent();
+                FileDeleteActivity.this.setResult(Activity.RESULT_OK, resultIntent);
+                finish();
+            }
+        };
+        LocalBroadcastManager.getInstance(this).registerReceiver(deleteCompletionReceiver, new IntentFilter(DeleteService.ACTION_DELETE_COMPLETE));
+
+        compressionBroadcastReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                boolean success = intent.getBooleanExtra(CompressionService.EXTRA_SUCCESS, false);
+                if (success) {
+                    FileDeleteActivity.this.setResult(Activity.RESULT_OK);
+                    finish();
+                }
+            }
+        };
+        LocalBroadcastManager.getInstance(this).registerReceiver(compressionBroadcastReceiver, new IntentFilter(CompressionService.ACTION_COMPRESSION_COMPLETE));
+    }
+
+    @Override
+    protected void onDestroy() {
+        if (deleteCompletionReceiver != null) {
+            LocalBroadcastManager.getInstance(this).unregisterReceiver(deleteCompletionReceiver);
+        }
+        if (compressionBroadcastReceiver != null) {
+            LocalBroadcastManager.getInstance(this).unregisterReceiver(compressionBroadcastReceiver);
+        }
+        super.onDestroy();
+    }
+    
+    // Recycle Bin Task class
     private class MoveToRecycleTask extends AsyncTask<Void, Void, List<File>> {
         private AlertDialog progressDialog;
         private List<File> filesToMove;
@@ -700,8 +833,6 @@ public class FileDeleteActivity extends Activity {
         @Override
         protected List<File> doInBackground(Void... voids) {
             List<File> movedFiles = new ArrayList<>();
-            
-            // Standard Phone Recycle Bin Logic
             File recycleBinDir = new File(Environment.getExternalStorageDirectory(), "HFMRecycleBin");
             if (!recycleBinDir.exists() && !useSdCardBin) {
                  if (!recycleBinDir.mkdir()) return new ArrayList<>();
@@ -713,14 +844,11 @@ public class FileDeleteActivity extends Activity {
                 boolean moveSuccess = false;
 
                 if (useSdCardBin && StorageUtils.isFileOnSdCard(context, sourceFile)) {
-                     // NEW LOGIC: Use SD Card SAF move
                      if (StorageUtils.moveFileOnSdCardSafely(context, sourceFile)) {
                          moveSuccess = true;
                      }
                 } else {
-                     // Existing Logic: Move to Phone Bin
                      File destFile = new File(recycleBinDir, sourceFile.getName());
-                     // Handle name conflicts logic...
                      if (destFile.exists()) {
                         String name = sourceFile.getName();
                         String extension = "";
@@ -735,7 +863,6 @@ public class FileDeleteActivity extends Activity {
                     if (sourceFile.renameTo(destFile)) {
                         moveSuccess = true;
                     } else {
-                        // Fallback copy-delete logic
                         if (StorageUtils.copyFile(context, sourceFile, destFile)) {
                             if (StorageUtils.deleteFile(context, sourceFile)) {
                                 moveSuccess = true;
