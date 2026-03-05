@@ -415,7 +415,23 @@ public class SearchActivity extends Activity implements SearchAdapter.OnItemClic
                     } else {
                         contentUri = ContentUris.withAppendedId(queryUri, id);
                     }
-                    results.add(new SearchResult(contentUri, id, dateModifiedSeconds * 1000, displayName, path));
+
+                    // --- DATE ISSUE FIX START ---
+                    // Android MediaStore often holds old metadata dates.
+                    // We check the actual Filesystem date and use the most recent one.
+                    long lastModifiedMillis = dateModifiedSeconds * 1000;
+                    if (path != null) {
+                        File actualFile = new File(path);
+                        if (actualFile.exists()) {
+                            long filesystemDate = actualFile.lastModified();
+                            if (filesystemDate > lastModifiedMillis) {
+                                lastModifiedMillis = filesystemDate;
+                            }
+                        }
+                    }
+                    // --- DATE ISSUE FIX END ---
+
+                    results.add(new SearchResult(contentUri, id, lastModifiedMillis, displayName, path));
                 }
 
                 if (cursor.getCount() < limit) {
@@ -905,7 +921,7 @@ public class SearchActivity extends Activity implements SearchAdapter.OnItemClic
                         .setPositiveButton("Delete All", new DialogInterface.OnClickListener() {
                                 @Override
                                 public void onClick(DialogInterface dialog, int which) {
-                    final String[] batchOptions = {"50 at a time", "100 at a time", "500 at a time", "1000 at a time", "Max (All at once)"};
+                    final String[] batchOptions = {"50", "100", "500", "1000", "Max (All at once)"};
                     final int[] batchValues = {50, 100, 500, 1000, 100000};
 
                     new AlertDialog.Builder(SearchActivity.this)
