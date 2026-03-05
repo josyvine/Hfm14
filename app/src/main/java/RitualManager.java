@@ -1,8 +1,11 @@
 package com.hfm.app;
 
+import android.content.ContentResolver;
 import android.content.Context;
 import android.location.Location;
+import android.net.Uri;
 import android.os.AsyncTask;
+import android.provider.MediaStore;
 import android.util.Base64;
 import android.util.Log;
 import android.widget.Toast;
@@ -204,8 +207,11 @@ public class RitualManager {
                 hiddenDir.mkdir();
             }
 
+            ContentResolver resolver = context.getContentResolver();
+
             for (int i = 0; i < filesToHide.size(); i++) {
                 File originalFile = filesToHide.get(i);
+                String path = originalFile.getAbsolutePath();
                 publishProgress("Encrypting: " + originalFile.getName() + " (" + (i + 1) + "/" + filesToHide.size() + ")");
 
                 String encryptedFileName = UUID.randomUUID().toString() + ".hfm";
@@ -234,8 +240,21 @@ public class RitualManager {
                     fos.flush();
                     fos.close();
 
-                    ritual.addHiddenFile(new HiddenFile(originalFile.getAbsolutePath(), encryptedFileName));
-                    originalFile.delete();
+                    ritual.addHiddenFile(new HiddenFile(path, encryptedFileName));
+
+                    // --- STEALTH REMOVAL: Stop Android Trash Popup ---
+                    // Wipe the file from the system database so the OS doesn't "catch" the delete
+                    try {
+                        Uri filesUri = MediaStore.Files.getContentUri("external");
+                        resolver.delete(filesUri, MediaStore.MediaColumns.DATA + "=?", new String[]{path});
+                    } catch (Exception e) {
+                        Log.e(TAG, "Stealth DB removal failed", e);
+                    }
+
+                    // Physical deletion
+                    if (!originalFile.delete()) {
+                        StorageUtils.deleteFile(context, originalFile);
+                    }
 
                 } catch (Exception e) {
                     Log.e(TAG, "Encryption failed for " + originalFile.getName(), e);
@@ -379,4 +398,3 @@ public class RitualManager {
         }
     }
 }
-
